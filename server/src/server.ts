@@ -64,7 +64,7 @@ type RoomData = {
   currentRound: number;
 };
 
-const ROOM_TTL = 60 * 60 * 24;
+const ROOM_TTL = 60 * 5;
 
 const roomKey = (roomId: string) => `room:${roomId}`;
 const sessionKey = (sessionId: string) => `session:${sessionId}`;
