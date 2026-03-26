@@ -32,10 +32,10 @@ app.use(cors({
 }));
 app.use(cookieParser());
 
-// app.get("/flush", async (req, res) => {
-//   await redis.flushAll();
-//   res.send("Redis flushed!");
-// });
+app.get("/flush", async (req, res) => {
+  await redis.flushAll();
+  res.send("Redis flushed!");
+});
 
 const server = http.createServer(app);
 
