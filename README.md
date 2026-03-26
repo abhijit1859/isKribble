@@ -1,4 +1,4 @@
-# 🎨 Skribbl Clone — Real-Time Multiplayer Drawing Game
+#  isKribble — Real-Time Multiplayer Drawing Game
 
 > A blazing-fast, Redis-powered, socket-based multiplayer drawing & guessing game backend. Built with Node.js, Socket.IO, and Redis.
 
