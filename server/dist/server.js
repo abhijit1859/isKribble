@@ -1,60 +1,128 @@
 import express from "express";
+import cors from "cors";
+import cookieParser from "cookie-parser";
+import { createClient } from "redis";
+import { v4 as uuidv4 } from "uuid";
 import http from "http";
 import { Server } from "socket.io";
+import { getRandomWords, MAX_ROUNDS } from "./utils/const.js";
+import dotenv from "dotenv";
+dotenv.config();
+const redis = createClient({
+    username: 'default',
+    password: process.env.REDIS_PASSWORD,
+    socket: {
+        host: process.env.REDIS_HOST,
+        port: 18087
+    }
+});
+redis.on('error', err => console.log('Redis Client Error', err));
+await redis.connect();
 const app = express();
+app.use(cors({
+    origin: process.env.FRONTEND_URL,
+    credentials: true,
+}));
+app.use(cookieParser());
+// app.get("/flush", async (req, res) => {
+//   await redis.flushAll();
+//   res.send("Redis flushed!");
+// });
 const server = http.createServer(app);
 const io = new Server(server, {
-    cors: { origin: "*" },
+    cors: {
+        origin: process.env.FRONTEND_URL,
+        credentials: true,
+    },
 });
-const rooms = {};
-const MAX_ROUNDS = 3;
-const WORDS = ["elephant", "guitar", "volcano", "umbrella", "penguin"];
-const getRoom = (roomId) => rooms[roomId];
-const getRandomWords = () => {
-    return [...WORDS].sort(() => Math.random() - 0.5).slice(0, 3);
-};
-const startTimer = (roomId) => {
-    const room = getRoom(roomId);
+const ROOM_TTL = 60 * 60 * 24;
+const roomKey = (roomId) => `room:${roomId}`;
+const sessionKey = (sessionId) => `session:${sessionId}`;
+async function getRoom(roomId) {
+    const raw = await redis.get(roomKey(roomId));
+    return raw ? JSON.parse(raw) : null;
+}
+async function saveRoom(room) {
+    await redis.set(roomKey(room.id), JSON.stringify(room), { EX: ROOM_TTL });
+}
+async function saveSession(sessionId, roomId, name) {
+    await redis.set(sessionKey(sessionId), JSON.stringify({ roomId, name }), { EX: ROOM_TTL });
+}
+async function getSession(sessionId) {
+    const raw = await redis.get(sessionKey(sessionId));
+    return raw ? JSON.parse(raw) : null;
+}
+function connectedPlayers(room) {
+    return room.players.filter((p) => p.id !== "");
+}
+const timers = {};
+function getTimers(roomId) {
+    if (!timers[roomId]) {
+        timers[roomId] = { turnTimer: null, countDownTimer: null };
+    }
+    return timers[roomId];
+}
+function stopTimers(roomId) {
+    const t = timers[roomId];
+    if (!t)
+        return;
+    if (t.turnTimer)
+        clearTimeout(t.turnTimer);
+    if (t.countDownTimer)
+        clearInterval(t.countDownTimer);
+}
+async function startTimer(roomId) {
+    const room = await getRoom(roomId);
     if (!room)
         return;
+    stopTimers(roomId);
     room.secondsLeft = 60;
-    room.countDownTimer = setInterval(() => {
-        room.secondsLeft--;
-        io.to(roomId).emit("timer-tick", { secondsLeft: room.secondsLeft });
-        if (room.secondsLeft <= 0) {
-            clearInterval(room.countDownTimer);
+    await saveRoom(room);
+    const t = getTimers(roomId);
+    t.countDownTimer = setInterval(async () => {
+        const r = await getRoom(roomId);
+        if (!r)
+            return;
+        r.secondsLeft--;
+        await saveRoom(r);
+        io.to(roomId).emit("timer-tick", { secondsLeft: r.secondsLeft });
+        if (r.secondsLeft <= 0) {
+            clearInterval(t.countDownTimer);
+            endTurn(roomId);
         }
     }, 1000);
-    room.turnTimer = setTimeout(() => {
-        endTurn(roomId);
-    }, 60000);
-};
-const stopTimers = (room) => {
-    if (room.turnTimer)
-        clearTimeout(room.turnTimer);
-    if (room.countDownTimer)
-        clearInterval(room.countDownTimer);
-    room.turnTimer = null;
-    room.countDownTimer = null;
-};
-const startGame = (roomId) => {
-    const room = getRoom(roomId);
+}
+async function startGame(roomId) {
+    const room = await getRoom(roomId);
     if (!room)
+        return;
+    if (room.gameStarted)
         return;
     room.gameStarted = true;
     room.drawerIndex = 0;
     room.currentRound = 1;
-    room.players.forEach(p => (p.points = 0));
+    room.players.forEach((p) => (p.points = 0));
+    await saveRoom(room);
     io.to(roomId).emit("game-start", {});
     startTurn(roomId);
-};
-const startTurn = (roomId) => {
-    const room = getRoom(roomId);
-    if (!room || room.players.length < 2)
+}
+async function startTurn(roomId) {
+    const room = await getRoom(roomId);
+    if (!room)
+        return;
+    const connected = connectedPlayers(room);
+    if (connected.length < 2)
         return;
     const drawer = room.players[room.drawerIndex];
-    room.correctGuessers.clear();
+    if (!drawer || drawer.id === "") {
+        room.drawerIndex = (room.drawerIndex + 1) % room.players.length;
+        await saveRoom(room);
+        startTurn(roomId);
+        return;
+    }
+    room.correctGuessers = [];
     room.currentWord = "";
+    await saveRoom(room);
     io.to(roomId).emit("start-turn", {
         drawer,
         round: room.currentRound,
@@ -63,138 +131,118 @@ const startTurn = (roomId) => {
     io.to(drawer.id).emit("word-choices", {
         words: getRandomWords(),
     });
-};
-const endTurn = (roomId) => {
-    const room = getRoom(roomId);
+}
+async function endTurn(roomId) {
+    const room = await getRoom(roomId);
     if (!room)
         return;
-    stopTimers(room);
+    stopTimers(roomId);
     io.to(roomId).emit("end-turn", {
         word: room.currentWord,
-        players: room.players,
+        players: connectedPlayers(room),
     });
     room.currentWord = "";
-    room.correctGuessers.clear();
-    setTimeout(() => {
-        if (!room.gameStarted || room.players.length < 2)
+    room.correctGuessers = [];
+    await saveRoom(room);
+    setTimeout(async () => {
+        const r = await getRoom(roomId);
+        if (!r)
             return;
-        const everyoneDrew = room.drawerIndex === room.players.length - 1;
+        const connected = connectedPlayers(r);
+        if (!r.gameStarted || connected.length < 2)
+            return;
+        const everyoneDrew = r.drawerIndex === r.players.length - 1;
         if (everyoneDrew) {
-            if (room.currentRound >= MAX_ROUNDS) {
+            if (r.currentRound >= MAX_ROUNDS) {
                 endGame(roomId);
             }
             else {
-                room.currentRound++;
-                room.drawerIndex = 0;
-                io.to(roomId).emit("new-round", { round: room.currentRound });
+                r.currentRound++;
+                r.drawerIndex = 0;
+                await saveRoom(r);
+                io.to(roomId).emit("new-round", { round: r.currentRound });
                 startTurn(roomId);
             }
         }
         else {
-            room.drawerIndex++;
+            r.drawerIndex++;
+            await saveRoom(r);
             startTurn(roomId);
         }
     }, 3000);
-};
-const endGame = (roomId) => {
-    const room = getRoom(roomId);
+}
+async function endGame(roomId) {
+    const room = await getRoom(roomId);
     if (!room)
         return;
     room.gameStarted = false;
-    stopTimers(room);
-    const leaderboard = [...room.players].sort((a, b) => b.points - a.points);
+    await saveRoom(room);
+    const leaderboard = connectedPlayers(room).sort((a, b) => b.points - a.points);
     io.to(roomId).emit("game-over", { leaderboard });
-    room.currentRound = 1;
-    room.drawerIndex = 0;
-};
-const stopGame = (roomId) => {
-    const room = getRoom(roomId);
-    if (!room)
-        return;
-    room.gameStarted = false;
-    stopTimers(room);
-    io.to(roomId).emit("game-stop", {});
-};
-io.on("connection", (socket) => {
+}
+io.on("connection", async (socket) => {
     console.log("connected", socket.id);
-    socket.on("join-room", ({ roomId, name }) => {
+    let sessionId = socket.handshake.auth.sessionId ?? "";
+    if (!sessionId)
+        sessionId = uuidv4();
+    console.log("sessionId:", sessionId);
+    socket.on("join-room", async ({ roomId, name }) => {
+        console.log("join-room", { roomId, name, sessionId });
         socket.join(roomId);
-        console.log(rooms.room1?.players);
-        if (!rooms[roomId]) {
-            rooms[roomId] = {
+        let room = await getRoom(roomId);
+        if (!room) {
+            room = {
                 id: roomId,
                 players: [],
                 gameStarted: false,
                 drawerIndex: 0,
                 currentWord: "",
                 secondsLeft: 60,
-                correctGuessers: new Set(),
-                turnTimer: null,
-                countDownTimer: null,
+                correctGuessers: [],
                 currentRound: 1,
             };
         }
-        const room = rooms[roomId];
-        const player = {
-            id: socket.id,
-            name,
-            points: 0,
-        };
-        room.players.push(player);
-        io.to(roomId).emit("updated-players", room.players);
+        const existingIndex = room.players.findIndex((p) => p.sessionId === sessionId);
+        if (existingIndex !== -1) {
+            room.players[existingIndex].id = socket.id;
+            room.players[existingIndex].name = name;
+            console.log("reconnected player, points:", room.players[existingIndex].points);
+        }
+        else {
+            room.players.push({ id: socket.id, sessionId, name, points: 0 });
+            console.log("new player added");
+        }
+        await saveRoom(room);
+        await saveSession(sessionId, roomId, name);
+        io.to(roomId).emit("updated-players", connectedPlayers(room));
         socket.emit("room-state", {
-            players: room.players,
+            players: connectedPlayers(room),
             gameStarted: room.gameStarted,
             drawer: room.players[room.drawerIndex],
-            wordLength: room.currentRound ? room.currentWord.length : 0,
-            secondsLeft: room.secondsLeft
+            wordLength: room.currentWord ? room.currentWord.length : 0,
+            secondsLeft: room.secondsLeft,
         });
-        if (room.players.length >= 2 && !room.gameStarted) {
+        const connected = connectedPlayers(room);
+        console.log("connected players:", connected.length, "gameStarted:", room.gameStarted);
+        if (connected.length >= 2 && !room.gameStarted) {
             startGame(roomId);
         }
     });
-    socket.on("word-select", ({ roomId, word }) => {
-        const room = getRoom(roomId);
+    socket.on("word-select", async ({ roomId, word }) => {
+        const room = await getRoom(roomId);
         if (!room)
             return;
         const drawer = room.players[room.drawerIndex];
-        // ✅ FIXED: only drawer can select
         if (drawer?.id !== socket.id)
             return;
         room.currentWord = word;
+        await saveRoom(room);
         io.to(roomId).emit("word-length", { length: word.length });
         socket.emit("your-word", { word });
         startTimer(roomId);
     });
-    socket.on("send-chat", ({ roomId, message }) => {
-        const room = getRoom(roomId);
-        if (!room)
-            return;
-        const player = room.players.find(p => p.id === socket.id);
-        const drawer = room.players[room.drawerIndex];
-        if (!player || drawer?.id === socket.id)
-            return;
-        const isCorrect = message.toLowerCase().trim() === room.currentWord.toLowerCase();
-        if (isCorrect && !room.correctGuessers.has(socket.id)) {
-            room.correctGuessers.add(socket.id);
-            player.points += room.secondsLeft * 2;
-            // ✅ FIXED TYPO
-            io.to(roomId).emit("correct-guess", {
-                player,
-                players: room.players,
-            });
-            const nonDrawers = room.players.filter(p => p.id !== drawer?.id);
-            const allGuessed = nonDrawers.every(p => room.correctGuessers.has(p.id));
-            if (allGuessed) {
-                endTurn(roomId);
-            }
-        }
-        else {
-            io.to(roomId).emit("receive-chat", { message, player });
-        }
-    });
-    socket.on("draw-line", ({ roomId, line }) => {
-        const room = rooms[roomId];
+    socket.on("draw-line", async ({ roomId, line }) => {
+        const room = await getRoom(roomId);
         if (!room)
             return;
         const drawer = room.players[room.drawerIndex];
@@ -202,8 +250,8 @@ io.on("connection", (socket) => {
             return;
         socket.to(roomId).emit("draw-line", line);
     });
-    socket.on("clear-canvas", ({ roomId }) => {
-        const room = rooms[roomId];
+    socket.on("clear-canvas", async ({ roomId }) => {
+        const room = await getRoom(roomId);
         if (!room)
             return;
         const drawer = room.players[room.drawerIndex];
@@ -211,30 +259,55 @@ io.on("connection", (socket) => {
             return;
         io.to(roomId).emit("clear-canvas");
     });
-    socket.on("disconnect", () => {
-        for (const roomId in rooms) {
-            const room = rooms[roomId];
-            if (!room)
-                continue;
-            const index = room.players.findIndex(p => p.id === socket.id);
-            if (index !== -1) {
-                room.players.splice(index, 1);
-                if (room.drawerIndex >= room.players.length) {
-                    room.drawerIndex = 0;
-                }
-                io.to(roomId).emit("updated-players", room.players);
-                if (room.players.length < 2 && room.gameStarted) {
-                    stopGame(roomId);
-                }
-                if (room.players.length === 0) {
-                    delete rooms[roomId];
-                }
-                break;
-            }
+    socket.on("send-chat", async ({ roomId, message }) => {
+        const room = await getRoom(roomId);
+        if (!room)
+            return;
+        const player = room.players.find((p) => p.id === socket.id);
+        const drawer = room.players[room.drawerIndex];
+        if (!player || drawer?.id === socket.id)
+            return;
+        const isCorrect = message.toLowerCase().trim() === room.currentWord.toLowerCase();
+        if (isCorrect && !room.correctGuessers.includes(socket.id)) {
+            room.correctGuessers.push(socket.id);
+            player.points += room.secondsLeft * 2;
+            await saveRoom(room);
+            io.to(roomId).emit("correct-guess", {
+                player,
+                players: connectedPlayers(room),
+            });
+            const nonDrawers = connectedPlayers(room).filter((p) => p.id !== drawer?.id);
+            const allGuessed = nonDrawers.every((p) => room.correctGuessers.includes(p.id));
+            if (allGuessed)
+                endTurn(roomId);
+        }
+        else {
+            io.to(roomId).emit("receive-chat", { message, player });
+        }
+    });
+    socket.on("disconnect", async () => {
+        const session = await getSession(sessionId);
+        if (!session)
+            return;
+        const room = await getRoom(session.roomId);
+        if (!room)
+            return;
+        const playerIndex = room.players.findIndex((p) => p.id === socket.id);
+        if (playerIndex !== -1) {
+            room.players[playerIndex].id = "";
+        }
+        await saveRoom(room);
+        const connected = connectedPlayers(room);
+        io.to(session.roomId).emit("updated-players", connected);
+        if (connected.length < 2 && room.gameStarted) {
+            room.gameStarted = false;
+            stopTimers(session.roomId);
+            await saveRoom(room);
+            io.to(session.roomId).emit("game-stop");
         }
     });
 });
-server.listen(3001, () => {
-    console.log("Server running on http://localhost:3001");
+server.listen(process.env.PORT, () => {
+    console.log("Server running on port 3000");
 });
 //# sourceMappingURL=server.js.map

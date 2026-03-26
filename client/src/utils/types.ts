@@ -2,6 +2,7 @@
 
 export type Player = {
   id: string;
+  sessionId:string;
   name: string;
   points: number;
 };
