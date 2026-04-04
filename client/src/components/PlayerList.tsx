@@ -23,7 +23,7 @@ const PlayerList:React.FC<Props> = ({players,drawerId,myId}) => {
 
           return (
             <div key={player.id}
-            className={`flex items-center gap-3 px-3 py-2 transition-all ${isMe?"bg-indigo border-l-4 border-indigo-500":"border-l-4 border-transparent"
+            className={`flex items-center gap-3 px-3 py-2 transition-all ${isMe?"bg-indigo border-l-4 border-[#FCBF49]":"border-l-4 border-transparent"
               
             } hover:bg-slate-50`}
             >
@@ -35,12 +35,12 @@ const PlayerList:React.FC<Props> = ({players,drawerId,myId}) => {
                   <span className="text-sm font-semibold text-slate-800 truncate">{player.name}</span>
 
                   {isMe&&(
-                    <span className="text-[10px] font-semibold text-indigo-500">you</span>
+                    <span className="text-[10px] font-semibold text-[#D62828]">you</span>
                   )}
                 </div>
 
                 {isDrawing&&(
-                  <div className="text-[11px] font-semibold text-indigo-500">Drawing....</div>
+                  <div className="text-[11px] font-semibold text-[#D62828]">Drawing....</div>
                 )}
               </div>
 

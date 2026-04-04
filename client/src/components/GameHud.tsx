@@ -22,8 +22,8 @@ const GameHUD:React.FC<Props>=({
 
     return(
         <div className="flex items-center justify-center flex-wrap gap-3 px-5 py-3 bg-white border border-slate-200 rounded-2xl shadow-sm">
-            <div className="px-2 py-1 text-xs font-bold text-indigo-600 bg-indigo rounded-full">
-                Rounde {round}/{maxRounds}
+            <div className="px-2 py-1 text-xs font-bold text-[#F45B26] bg-indigo rounded-full">
+                Round <span className="text-[#F58B54]">{round}/{maxRounds}</span>
             </div>
 
             <div className="flex-1 text-center">
@@ -36,7 +36,7 @@ const GameHUD:React.FC<Props>=({
 
             <div
         className={`min-w-14 text-center text-2xl font-extrabold tabular-nums transition-colors ${
-          isLowTime ? "text-red-500" : "text-indigo-500"
+          isLowTime ? "text-red-500" : "text-[#F58B54]"
         }`}
       >
         {secondsLeft}s

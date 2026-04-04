@@ -51,12 +51,12 @@ const ChatPanel: React.FC<Props> = ({ messages, isDrawer, onSend }) => {
           onKeyDown={handleKey}
           disabled={isDrawer}
           placeholder={isDrawer ? "You're drawing 🎨" : "Type guess..."}
-          className="flex-1 px-3 py-2 text-sm border border-slate-200 rounded-lg outline-none focus:ring-2 focus:ring-indigo-400 disabled:bg-slate-100"
+          className="flex-1 px-3 py-2 text-sm border border-slate-200 rounded-lg outline-none focus:ring-2 focus:ring-[#F08D39] disabled:bg-slate-100"
         />
         <button
           onClick={submit}
           disabled={isDrawer}
-          className="px-4 py-2 rounded-lg bg-indigo-500 text-white font-bold hover:bg-indigo-600 disabled:bg-slate-300"
+          className="px-4 py-2 rounded-lg bg-[#F45B26] text-white font-bold hover:bg-[#E87F24] disabled:bg-slate-300"
         >
           ➤
         </button>

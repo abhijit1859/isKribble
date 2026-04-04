@@ -2,7 +2,7 @@ import "./App.css";
 import ChatPanel from "./components/ChatBox";
 import DrawingCanvas from "./components/DrawingCanvas";
 import GameHUD from "./components/GameHud";
-import bg2 from "./assets/bg2.png";
+import landing_page from "../public/landing_page.png";
 
 import JoinScreen from "./components/JoinScreen";
 import PlayerList from "./components/PlayerList";
@@ -39,7 +39,7 @@ function App() {
     <div
       className="h-screen w-full bg-slate-100 p-3"
       style={{
-        backgroundImage: `url(${bg2})`,
+        backgroundImage: `url(${landing_page})`,
         backgroundSize: "cover",
         backgroundPosition: "center",
       }}
