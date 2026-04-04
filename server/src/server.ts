@@ -12,21 +12,21 @@ dotenv.config()
 
  
 //prod
-// const redis = createClient({
-//    username: 'default',
-//     password: process.env.REDIS_PASSWORD!,
-//     socket: {
-//         host: process.env.REDIS_HOST!,
-//         port: 18087
-//     }
-// });
-//localhost
 const redis = createClient({
+   username: 'default',
+    password: process.env.REDIS_PASSWORD!,
     socket: {
-        host: 'localhost',
-        port: 6379
+        host: process.env.REDIS_HOST!,
+        port: 18087
     }
 });
+//localhost
+// const redis = createClient({
+//     socket: {
+//         host: 'localhost',
+//         port: 6379
+//     }
+// });
 
 redis.on('error', err => console.log('Redis Client Error', err));
 
