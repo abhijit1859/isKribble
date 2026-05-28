@@ -1,49 +1,93 @@
-type Props={
-    round:number;
-    maxRounds:number;
-    secondsLeft:number;
-    wordLength:number;
-    isDrawer:boolean;
-    myWord:string;
+type Props = {
+  round: number;
+  maxRounds: number;
+  secondsLeft: number;
+  wordLength: number;
+  isDrawer: boolean;
+  myWord: string;
+};
 
-}
+const GameHUD: React.FC<Props> = ({
+  round,
+  maxRounds,
+  secondsLeft,
+  wordLength,
+  isDrawer,
+  myWord,
+}) => {
+  const blanks =
+    wordLength > 0
+      ? Array.from({ length: wordLength }, () => "_").join(" ")
+      : "Waiting for word...";
 
-const GameHUD:React.FC<Props>=({
-    round,
-    maxRounds,
-    secondsLeft,
-    wordLength,
-    isDrawer,
-    myWord
-})=>{
-    const blanks=wordLength>0?Array.from({length:wordLength},()=>"_").join(" "):"Waiting for word..."
+  const isLowTime = secondsLeft <= 10;
 
-    const isLowTime=secondsLeft<=10;
+  return (
+    <div className="flex items-center gap-4 px-5 py-4 bg-white border-4 border-black rounded-[1.5rem] shadow-[6px_6px_0px_black]">
 
-    return(
-        <div className="flex items-center justify-center flex-wrap gap-3 px-5 py-3 bg-white border border-slate-200 rounded-2xl shadow-sm">
-            <div className="px-2 py-1 text-xs font-bold text-[#F45B26] bg-indigo rounded-full">
-                Round <span className="text-[#F58B54]">{round}/{maxRounds}</span>
-            </div>
+      {/* ROUND */}
+      <div className="bg-[#FFD54A] border-4 border-black rounded-2xl px-4 py-2 shadow-[3px_3px_0px_black]">
 
-            <div className="flex-1 text-center">
-                {isDrawer&&myWord?(
-                    <span className="text-xl font-extrabold tracking-widest text-slate-800 uppercase">{myWord}</span>
-                ):(
-                    <span className="font-mono text-xl font-semibold tracking-[0.4em] text-slate-600">{blanks}</span>
-                )}
-            </div>
+        <p className="text-xs font-black text-[#5c4b00] uppercase tracking-wide">
+          Round
+        </p>
 
-            <div
-        className={`min-w-14 text-center text-2xl font-extrabold tabular-nums transition-colors ${
-          isLowTime ? "text-red-500" : "text-[#F58B54]"
-        }`}
-      >
-        {secondsLeft}s
+        <p className="text-lg font-black text-[#2B2B2B]">
+          {round}/{maxRounds}
+        </p>
       </div>
-        </div>
-    )
 
-}
+      {/* WORD */}
+      <div className="flex-1 flex justify-center">
 
-export default GameHUD
+        {isDrawer && myWord ? (
+          <div className="bg-[#FFF3BF] border-4 border-black rounded-2xl px-6 py-3 shadow-[3px_3px_0px_black]">
+
+            <span className="text-2xl font-black tracking-[0.2em] text-[#2B2B2B] uppercase">
+              {myWord}
+            </span>
+
+          </div>
+        ) : (
+          <div className="bg-[#F8F9FA] border-4 border-black rounded-2xl px-6 py-3 shadow-[3px_3px_0px_black]">
+
+            <span className="font-mono text-2xl font-black tracking-[0.35em] text-[#495057]">
+              {blanks}
+            </span>
+
+          </div>
+        )}
+      </div>
+
+      {/* TIMER */}
+      <div
+        className={`
+          min-w-[85px]
+          text-center
+          border-4
+          border-black
+          rounded-2xl
+          px-4
+          py-2
+          shadow-[3px_3px_0px_black]
+          ${
+            isLowTime
+              ? "bg-[#FF6B6B] text-white"
+              : "bg-[#74C0FC] text-[#2B2B2B]"
+          }
+        `}
+      >
+
+        <p className="text-xs font-black uppercase tracking-wide">
+          Time
+        </p>
+
+        <p className="text-2xl font-black tabular-nums">
+          {secondsLeft}s
+        </p>
+      </div>
+    </div>
+  );
+};
+
+export default GameHUD;

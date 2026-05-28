@@ -1,5 +1,4 @@
-// ─── Avatar Component ────────────────────────────────────────────────────────
-// Shows a gradient circle with the player's emoji & initial.
+ 
 
 import React from "react";
 import { getAvatarColors, getAvatarEmoji } from "../utils/avatar";
@@ -43,8 +42,7 @@ const Avatar: React.FC<AvatarProps> = ({
           {emoji}
         </div>
 
-        {/* Pencil badge for the drawer */}
-        {isDrawer && (
+         {isDrawer && (
           <div
             style={{
               position: "absolute",

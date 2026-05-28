@@ -1,12 +1,13 @@
 import "./App.css";
+
 import ChatPanel from "./components/ChatBox";
 import DrawingCanvas from "./components/DrawingCanvas";
 import GameHUD from "./components/GameHud";
-import landing_page from "../public/landing_page.png";
-
 import JoinScreen from "./components/JoinScreen";
 import PlayerList from "./components/PlayerList";
 import WordChoiceOverlay from "./components/WordChoiceOverlay";
+import WaitingRoom from "./components/WaitingPage";
+
 import { useSocket } from "./hooks/useSocket";
 
 function App() {
@@ -31,33 +32,46 @@ function App() {
 
   const amIDrawing = drawer?.id === myId;
 
+  /* JOIN SCREEN */
   if (phase === "join") {
     return <JoinScreen onJoin={joinRoom} />;
   }
 
   return (
+  <div className="h-screen w-full overflow-hidden bg-[#F5F7FB] relative">
+
+   
     <div
-      className="h-screen w-full bg-slate-100 p-3"
+      className="absolute inset-0 opacity-[0.35] pointer-events-none"
       style={{
-        backgroundImage: `url(${landing_page})`,
-        backgroundSize: "cover",
-        backgroundPosition: "center",
+        backgroundImage:
+          "radial-gradient(#DFE3EA 1px, transparent 1px)",
+        backgroundSize: "22px 22px",
       }}
-    >
+    />
+
+ 
+    <div className="
+      absolute
+      top-0
+      left-0
+      w-full
+      h-48
+      bg-gradient-to-b
+      from-white/70
+      to-transparent
+      pointer-events-none
+    " />
+
+    
+    <div className="relative z-10 h-full">
+
+       
       {phase === "waiting" ? (
-        <div className="flex items-center justify-center h-full">
-          <div className="bg-white shadow-md rounded-xl p-10 text-center">
-            <h1 className="text-3xl font-semibold">
-              Waiting for players...
-            </h1>
-            <p className="mt-4 text-gray-500 font-medium">
-              Invite your friends! <br />
-              We need at least 2 players to start the game
-            </p>
-          </div>
-        </div>
+        <WaitingRoom />
       ) : (
-        <div className="max-w-300 mx-auto h-full flex flex-col gap-3">
+        <div className="h-full flex flex-col p-4 gap-4">
+ 
           <GameHUD
             round={round}
             maxRounds={maxRounds}
@@ -66,17 +80,35 @@ function App() {
             isDrawer={amIDrawing}
             myWord={myWord}
           />
-
-          <div className="flex flex-1 gap-3 overflow-hidden">
-            <div className="w-55 shrink-0 bg-white rounded-xl shadow-sm p-2 overflow-y-auto">
+ 
+          <div
+            className="
+              flex-1
+              min-h-0
+              grid
+              grid-cols-[260px_1fr_340px]
+              gap-4
+            "
+          >
+ 
+            <div className="min-h-0 overflow-hidden">
               <PlayerList
                 players={players}
                 drawerId={drawer?.id ?? ""}
                 myId={myId}
               />
             </div>
-
-            <div className="flex-1 bg-white rounded-xl shadow-sm flex items-center justify-center overflow-hidden">
+ 
+            <div
+              className="
+                min-h-0
+                bg-[#FCFCFD]
+                border
+                border-[#E9ECEF]
+                rounded-[28px]
+                overflow-hidden
+              "
+            >
               <DrawingCanvas
                 isDrawer={amIDrawing}
                 lines={lines}
@@ -84,7 +116,8 @@ function App() {
               />
             </div>
 
-            <div className="w-75 shrink-0 bg-white rounded-xl shadow-sm p-2 flex flex-col">
+         
+            <div className="min-h-0 overflow-hidden">
               <ChatPanel
                 messages={messages}
                 isDrawer={amIDrawing}
@@ -94,7 +127,7 @@ function App() {
           </div>
         </div>
       )}
-
+ 
       {phase === "word-choice" &&
         amIDrawing &&
         wordChoices.length > 0 && (
@@ -104,7 +137,8 @@ function App() {
           />
         )}
     </div>
-  );
+  </div>
+);
 }
 
 export default App;
