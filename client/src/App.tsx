@@ -32,8 +32,7 @@ function App() {
 
   const amIDrawing = drawer?.id === myId;
 
-  /* JOIN SCREEN */
-  if (phase === "join") {
+   if (phase === "join") {
     return <JoinScreen onJoin={joinRoom} />;
   }
 
@@ -57,20 +56,20 @@ function App() {
       left-0
       w-full
       h-48
-      bg-gradient-to-b
+      bg-linear-to-b
       from-white/70
       to-transparent
       pointer-events-none
     " />
 
     
-    <div className="relative z-10 h-full">
+    <div className="relative z-10 h-full overflow-hidden">
 
        
       {phase === "waiting" ? (
         <WaitingRoom />
       ) : (
-        <div className="h-full flex flex-col p-4 gap-4">
+        <div className="h-full min-h-0 overflow-hidden flex flex-col p-4 gap-4 box-border">
  
           <GameHUD
             round={round}
