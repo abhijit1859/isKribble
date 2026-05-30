@@ -1,9 +1,11 @@
 import { createClient } from "redis";
-
+import dotenv from "dotenv"
+dotenv.config()
 class RedisConfig {
   public client;
 
   constructor() {
+    console.log(process.env.REDIS_URL)
     this.client = createClient({
       url: process.env.REDIS_URL!,
     });
