@@ -6,6 +6,9 @@ class RedisConfig {
 
   constructor() {
     console.log(process.env.REDIS_URL)
+    if(!process.env.RED){
+      console.log("REDIS URL NOT FOUND")
+    }
     this.client = createClient({
       url: process.env.REDIS_URL!,
     });
