@@ -182,6 +182,7 @@ export class GameService {
     if (!room) return;
 
     room.gameStarted = false;
+    room.continueVotes=[]
 
     await this.roomService.saveRoom(room);
 

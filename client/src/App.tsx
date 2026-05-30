@@ -9,6 +9,7 @@ import WordChoiceOverlay from "./components/WordChoiceOverlay";
 import WaitingRoom from "./components/WaitingPage";
 
 import { useSocket } from "./hooks/useSocket";
+import LeaderboardModal from "./components/Leaderboard";
 
 function App() {
   const {
@@ -28,6 +29,8 @@ function App() {
     secondsLeft,
     myWord,
     wordLength,
+    continueGame,
+    leaderboard
   } = useSocket();
 
   const amIDrawing = drawer?.id === myId;
@@ -135,6 +138,11 @@ function App() {
             onSelect={selectWord}
           />
         )}
+
+        {
+          phase==="game-over"&&
+          <LeaderboardModal leaderboard={leaderboard} onContinue={continueGame}/>
+        }
     </div>
   </div>
 );

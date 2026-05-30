@@ -1,11 +1,13 @@
-import { useState } from "react"
+import { useEffect, useState } from "react"
 import { X } from "lucide-react"
+ 
 
 const JoinScreen = ({ onJoin }) => {
   const [name, setName] = useState("")
   const [roomName, setRoomName] = useState("")
   const [showModal, setShowModal] = useState(false)
   const [errors, setErrors] = useState({})
+  const [timer, setTimer] = useState(60)
 
   const validate = () => {
     const newErrors = {}
@@ -37,12 +39,26 @@ const JoinScreen = ({ onJoin }) => {
     onJoin(name.trim(), roomName.trim())
   }
 
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setTimer((prev) => {
+        if (prev <= 1) {
+          return 60; // reset
+        }
+
+        return prev - 1;
+      });
+    }, 1000);
+
+    return () => clearInterval(interval);
+  }, []);
+
   return (
     <div className="min-h-screen overflow-hidden bg-[#FFF8E7] relative text-[#2B2B2B]">
 
       <section className="grid lg:grid-cols-2 px-6 py-20 gap-16 items-center mx-auto max-w-6xl">
 
-        
+
         <div>
 
           <p className="text-sm font-extrabold text-red-600 uppercase tracking-wider mb-6">
@@ -69,8 +85,8 @@ const JoinScreen = ({ onJoin }) => {
           </button>
         </div>
 
-     
-        <div className="bg-white border-black p-6 border-4 rounded-[4xl rotate-1 shadow-[10px_10px_0px_black]">
+
+        <div className="bg-white border-black p-6 border-4 rounded-4xl rotate-1 shadow-[10px_10px_0px_black]">
 
           <div className="flex items-center justify-between">
             <div>
@@ -79,7 +95,7 @@ const JoinScreen = ({ onJoin }) => {
             </div>
 
             <div className="px-5 py-3 border-3 border-black rounded-xl text-white bg-red-500 font-black">
-              60s
+              {timer}s
             </div>
           </div>
 
@@ -87,20 +103,20 @@ const JoinScreen = ({ onJoin }) => {
         </div>
       </section>
 
- 
+
       {showModal && (
         <div className="fixed inset-0 bg-black/40 backdrop-blur-[2px] flex items-center justify-center z-50 p-4 animate-in fade-in duration-200">
 
           <div className="w-full border-4 border-black p-7 bg-[#FFF8E7] rounded-4xl max-w-md relative shadow-[12px_12px_0px_black] animate-in zoom-in-95 duration-200">
 
-       
+
             <button
               onClick={() => setShowModal(false)}
               className="absolute top-4 right-4 bg-white hover:bg-red-100 border-3 border-black rounded-full p-2 transition-all hover:rotate-12"
             >
               <X size={24} strokeWidth={3} />
             </button>
- 
+
             <h2 className="text-4xl font-black text-center">
               Join the Chaos
             </h2>
@@ -109,13 +125,13 @@ const JoinScreen = ({ onJoin }) => {
               Enter a room and start drawing badly.
             </p>
 
-           
+
             <form
               onSubmit={startGame}
               className="mt-8 space-y-6"
             >
 
-              
+
               <div>
                 <label className="font-black text-lg block mb-2">
                   Username
@@ -131,10 +147,9 @@ const JoinScreen = ({ onJoin }) => {
                   placeholder="slayer100"
                   maxLength={12}
                   className={`w-full border-4 rounded-2xl text-xl font-bold px-5 py-4 outline-none transition-all
-                    ${
-                      errors.name
-                        ? "border-red-500 focus:ring-red-300"
-                        : "border-black focus:ring-[#FF6B6B]/30"
+                    ${errors.name
+                      ? "border-red-500 focus:ring-red-300"
+                      : "border-black focus:ring-[#FF6B6B]/30"
                     }
                     focus:ring-4`}
                 />
@@ -146,7 +161,7 @@ const JoinScreen = ({ onJoin }) => {
                 )}
               </div>
 
-           
+
               <div>
                 <label className="font-black text-lg block mb-2">
                   Room Name
@@ -161,10 +176,9 @@ const JoinScreen = ({ onJoin }) => {
                   }}
                   placeholder="room45"
                   className={`w-full border-4 rounded-2xl text-xl font-bold px-5 py-4 outline-none transition-all
-                    ${
-                      errors.room
-                        ? "border-red-500 focus:ring-red-300"
-                        : "border-black focus:ring-[#FF6B6B]/30"
+                    ${errors.room
+                      ? "border-red-500 focus:ring-red-300"
+                      : "border-black focus:ring-[#FF6B6B]/30"
                     }
                     focus:ring-4`}
                 />
@@ -175,7 +189,7 @@ const JoinScreen = ({ onJoin }) => {
                   </p>
                 )}
               </div>
- 
+
               <button
                 type="submit"
                 disabled={!name.trim() || !roomName.trim()}

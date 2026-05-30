@@ -89,7 +89,7 @@ export function useSocket() {
 
     socket.on("correct-guess", ({ player, players }) => {
       setPlayers(players);
-      addMessage({ type: "correct", player }) ;
+      addMessage({ type: "correct", player }) ; 
     });
 
     socket.on("updated-players", (updatedPlayers) => {
@@ -109,6 +109,7 @@ export function useSocket() {
     });
 
     socket.on("game-over", ({ leaderboard }) => {
+      console.log(leaderboard)
       setLeaderboard(leaderboard);
       setPhase("game-over");
     });
@@ -183,6 +184,12 @@ export function useSocket() {
     [roomId]
   );
 
+  const continueGame=useCallback(()=>{
+    socketRef.current?.emit("continue-game",{
+      roomId
+    })
+  },[roomId])
+
   return {
     myId,
     phase,
@@ -202,5 +209,6 @@ export function useSocket() {
     sendLine,
     clearCanvas,
     selectWord,
+    continueGame
   };
 }

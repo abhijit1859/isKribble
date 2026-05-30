@@ -1,4 +1,4 @@
-export const MAX_ROUNDS = 3
+export const MAX_ROUNDS = 1
 export const WORDS = ["elephant", "guitar", "volcano", "umbrella", "penguin"]
  
 export function getRandomWords() {

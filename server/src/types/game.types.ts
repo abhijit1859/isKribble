@@ -14,4 +14,5 @@ export interface RoomData {
   secondsLeft: number;
   correctGuessers: string[];
   currentRound: number;
+  continueVotes?:string[];
 }

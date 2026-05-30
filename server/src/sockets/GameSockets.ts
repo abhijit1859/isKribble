@@ -75,6 +75,10 @@ export class GameSocket {
             );
         });
 
+        socket.on("continue-game",async({roomId})=>{
+            await this.handleContinueGame(socket,roomId)
+        })
+
         socket.on("disconnect", async () => {
             await this.handleDisconnect(
                 socket,
@@ -82,7 +86,6 @@ export class GameSocket {
             );
         });
     }
-
 
     async handleJoinRoom(
         socket: Socket,
@@ -180,9 +183,6 @@ export class GameSocket {
         }
     }
 
-
-
-
     async handleWordSelect(
         socket: Socket,
         roomId: string,
@@ -210,9 +210,6 @@ export class GameSocket {
 
         await this.gameService.startTimer(roomId);
     }
-
-
-
 
     async handleChat(
         socket: Socket,
@@ -281,7 +278,27 @@ export class GameSocket {
         }
     }
 
+    async handleContinueGame(socket:Socket,roomId:string){
+        const room=await this.roomService.getRoom(roomId)
 
+        if(!room) return
+
+        if(!room.continueVotes?.includes(socket.id)){
+            room.continueVotes?.push(socket.id)
+        }
+
+        await this.roomService.saveRoom(room)
+
+        const connected=this.roomService.connectedPlayers(room)
+
+        if(room.continueVotes?.length===connected.length){
+            room.continueVotes=[]
+
+            await this.roomService.saveRoom(room)
+
+            await this.gameService.startGame(roomId)
+        }
+    }
 
     async handleDisconnect(
         socket: Socket,
